@@ -1,7 +1,7 @@
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
-const { WebcastPushClient } = require('tiktok-live-connector');
+const WebcastPushConnection = require('tiktok-live-connector');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,7 +14,7 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 const TIKTOK_USERNAME = 'diibii26';
-const tiktokLiveConnection = new WebcastPushClient(TIKTOK_USERNAME);
+const tiktokLiveConnection = new WebcastPushConnection(TIKTOK_USERNAME);
 
 tiktokLiveConnection.connect().catch(err => {
   console.log('Attesa live o errore connessione TikTok:', err);
