@@ -3,7 +3,7 @@ const express = require('express'); const http = require('http'); const WebSocke
 const app = express(); const PORT = process.env.PORT || 3000;
 app.get('/', (req, res) => { res.send('Server TikTok WebSocket Attivo!'); });
 const server = http.createServer(app); const wss = new WebSocket.Server({ server });
-const TIKTOK_USERNAME = 'diibii26';
+const TIKTOK_USERNAME = 'manolita772';
 let tiktokLiveConnection; try { tiktokLiveConnection = new WebcastPushConnection(TIKTOK_USERNAME);
 tiktokLiveConnection.connect().catch(err => { console.log('TikTok non in Live o errore di connessione:', err.message || err); });
 tiktokLiveConnection.on('chat', data => { const payload = JSON.stringify({ user: data.uniqueId, comment: data.comment });
