@@ -4,11 +4,18 @@ app.get('/', (req, res) => { res.send('Server TikTok WebSocket Attivo!'); });
 const server = http.createServer(app); const wss = new WebSocket.Server({ server });
 setInterval(() => { wss.clients.forEach(client => { if (client.readyState === WebSocket.OPEN) { client.ping(); } }); }, 20000);
 const TIKTOK_USERNAME = 'manolita772';
-async function initTikTok() { try { const TikTokModule = await import('tiktok-live-connector');
-// Identifica la classe del costruttore corretta
-let WebcastClass = TikTokModule.WebcastPushConnection || TikTokModule.WebcastPushClient || TikTokModule.default;
-if (typeof WebcastClass !== 'function' && typeof TikTokModule === 'function') {
-  WebcastClass = TikTokModule;
+async function initTikTok() { try { const mod = await import('tiktok-live-connector');
+// Trova la classe valida in qualsiasi tipo di esportazione (CommonJS / ESM)
+let WebcastClass = null;
+if (typeof mod.WebcastPushConnection === 'function') WebcastClass = mod.WebcastPushConnection;
+else if (typeof mod.WebcastPushClient === 'function') WebcastClass = mod.WebcastPushClient;
+else if (mod.default && typeof mod.default.WebcastPushConnection === 'function') WebcastClass = mod.default.WebcastPushConnection;
+else if (mod.default && typeof mod.default.WebcastPushClient === 'function') WebcastClass = mod.default.WebcastPushClient;
+else if (typeof mod.default === 'function') WebcastClass = mod.default;
+else if (typeof mod === 'function') WebcastClass = mod;
+
+if (!WebcastClass) {
+  throw new Error("Impossibile trovare la classe WebcastPushConnection nel modulo");
 }
 
 const tiktokLiveConnection = new WebcastClass(TIKTOK_USERNAME);
@@ -38,6 +45,6 @@ tiktokLiveConnection.on('chat', data => {
 tiktokLiveConnection.on('disconnected', () => {
   console.log('TikTok Live disconnessa.');
 });
-} catch (e) { console.log('Errore avvio TikTok:', e); } }
+} catch (e) { console.log('Errore avvio TikTok:', e.message || e); } }
 initTikTok();
 server.listen(PORT, () => { console.log('Server in ascolto sulla porta ' + PORT); });
