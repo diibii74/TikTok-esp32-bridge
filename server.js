@@ -4,7 +4,7 @@ app.get('/', (req, res) => { res.send('Server TikTok WebSocket Attivo!'); });
 const server = http.createServer(app); const wss = new WebSocket.Server({ server });
 setInterval(() => { wss.clients.forEach(client => { if (client.readyState === WebSocket.OPEN) { client.ping(); } }); }, 20000);
 const TIKTOK_USERNAME = 'manolita772';
-function connectToTikTok() { const connection = new WebcastPushConnection(TIKTOK_USERNAME);
+function connectToTikTok() { const connection = new WebcastPushConnection(TIKTOK_USERNAME, { enableWebsocketUpgrade: true, clientParams: { app_language: 'it-IT', webcast_sdk_version: '1.3.0' } });
 connection.connect() .then(state => { console.log('CONNESSO A TIKTOK LIVE! RoomId: ' + state.roomId); }) .catch(err => { console.log('Errore connessione TikTok:', err.message || err); console.log('Riprovo tra 10 secondi...'); setTimeout(connectToTikTok, 10000); });
 connection.on('chat', data => { console.log('[CHAT] ' + data.uniqueId + ': ' + data.comment); const payload = JSON.stringify({ user: data.uniqueId, comment: data.comment });
 wss.clients.forEach(client => {
