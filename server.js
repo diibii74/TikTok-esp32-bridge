@@ -4,7 +4,13 @@ app.get('/', (req, res) => { res.send('Server TikTok WebSocket Attivo!'); });
 const server = http.createServer(app); const wss = new WebSocket.Server({ server });
 setInterval(() => { wss.clients.forEach(client => { if (client.readyState === WebSocket.OPEN) { client.ping(); } }); }, 20000);
 const TIKTOK_USERNAME = 'manolita772';
-async function initTikTok() { try { const tiktokModule = await import('tiktok-live-connector'); const WebcastClass = tiktokModule.WebcastPushConnection || tiktokModule.default;
+async function initTikTok() { try { const TikTokModule = await import('tiktok-live-connector');
+// Identifica la classe del costruttore corretta
+let WebcastClass = TikTokModule.WebcastPushConnection || TikTokModule.WebcastPushClient || TikTokModule.default;
+if (typeof WebcastClass !== 'function' && typeof TikTokModule === 'function') {
+  WebcastClass = TikTokModule;
+}
+
 const tiktokLiveConnection = new WebcastClass(TIKTOK_USERNAME);
 
 tiktokLiveConnection.connect()
