@@ -21,12 +21,15 @@ setInterval(() => {
   });
 }, 20000);
 
-// Username impostato su margh.90
+// Sostituisci con lo username da monitorare
 const TIKTOK_USERNAME = 'margh.90';
 
 function connectToTikTok() {
   const connection = new WebcastPushConnection(TIKTOK_USERNAME, {
     enableWebsocketUpgrade: true,
+    requestOptions: {
+      timeout: 10000,
+    },
     clientParams: {
       app_language: 'it-IT',
       webcast_sdk_version: '1.3.0'
@@ -38,7 +41,7 @@ function connectToTikTok() {
       console.log('CONNESSO A TIKTOK LIVE! RoomId: ' + state.roomId);
     })
     .catch(err => {
-      console.log('Attesa o errore connessione TikTok:', err.message || err);
+      console.log('Errore connessione TikTok:', err.message || err);
       console.log('Riprovo tra 10 secondi...');
       setTimeout(connectToTikTok, 10000);
     });
