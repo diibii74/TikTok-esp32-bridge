@@ -21,21 +21,31 @@ setInterval(() => {
   });
 }, 20000);
 
+// Username TikTok
 const TIKTOK_USERNAME = 'margh.90';
 
 function connectToTikTok() {
-  const connection = new WebcastPushConnection(TIKTOK_USERNAME);
+  // Inizializzazione della connessione
+  const connection = new WebcastPushConnection(TIKTOK_USERNAME, {
+    clientParams: {
+      app_language: 'it-IT',
+      device_platform: 'web'
+    },
+    enableWebsocketUpgrade: true
+  });
 
+  // Connessione alla Live
   connection.connect()
     .then(state => {
       console.log('CONNESSO A TIKTOK LIVE! RoomId: ' + state.roomId);
     })
     .catch(err => {
-      console.log('Errore connessione TikTok:', err.message || err);
+      console.log('Errore di connessione:', err.message || err);
       console.log('Riprovo tra 10 secondi...');
       setTimeout(connectToTikTok, 10000);
     });
 
+  // Ascolto messaggi chat
   connection.on('chat', data => {
     console.log('[CHAT] ' + data.uniqueId + ': ' + data.comment);
     const payload = JSON.stringify({
@@ -51,7 +61,7 @@ function connectToTikTok() {
   });
 
   connection.on('disconnected', () => {
-    console.log('TikTok Live disconnessa. Riconnessione tra 10s...');
+    console.log('TikTok Live disconnessa. Riconnessione in corso...');
     setTimeout(connectToTikTok, 10000);
   });
 }
