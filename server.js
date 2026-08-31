@@ -24,9 +24,7 @@ setInterval(() => {
 const TIKTOK_USERNAME = 'margh.90';
 
 function connectToTikTok() {
-  const connection = new WebcastPushConnection(TIKTOK_USERNAME, {
-    enableWebsocketUpgrade: true
-  });
+  const connection = new WebcastPushConnection(TIKTOK_USERNAME);
 
   connection.connect()
     .then(state => {
