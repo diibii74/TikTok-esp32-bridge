@@ -21,14 +21,17 @@ setInterval(() => {
   });
 }, 20000);
 
-// Sostituisci con lo username da monitorare
 const TIKTOK_USERNAME = 'margh.90';
 
 function connectToTikTok() {
   const connection = new WebcastPushConnection(TIKTOK_USERNAME, {
+    processInitialData: true,
     enableWebsocketUpgrade: true,
     requestOptions: {
       timeout: 10000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+      }
     },
     clientParams: {
       app_language: 'it-IT',
