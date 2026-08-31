@@ -1,73 +1,250 @@
-const express = require('express');
-const http = require('http');
-const WebSocket = require('ws');
-const { WebcastPushConnection } = require('tiktok-live-connector');
+const http = require("http");
+const WebSocket = require("ws");
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
+const TIKTOK_ID = "margh.90";
 
-app.get('/', (req, res) => {
-  res.send('Server TikTok WebSocket Attivo!');
+let tiktokClient = null;
+let reconnectTimer = null;
+
+// ----------------------------------------------------
+// HTTP SERVER
+// ----------------------------------------------------
+
+const server = http.createServer((req, res) => {
+    res.writeHead(200, {
+        "Content-Type": "application/json; charset=utf-8"
+    });
+
+    res.end(JSON.stringify({
+        status: "online",
+        tiktok: TIKTOK_ID,
+        websocket: "active"
+    }));
 });
 
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+// ----------------------------------------------------
+// WEBSOCKET SERVER
+// ----------------------------------------------------
 
-setInterval(() => {
-  wss.clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.ping();
-    }
-  });
-}, 20000);
+const wss = new WebSocket.Server({
+    server: server
+});
 
-// Username TikTok
-const TIKTOK_USERNAME = 'margh.90';
-
-function connectToTikTok() {
-  // Inizializzazione della connessione
-  const connection = new WebcastPushConnection(TIKTOK_USERNAME, {
-    clientParams: {
-      app_language: 'it-IT',
-      device_platform: 'web'
-    },
-    enableWebsocketUpgrade: true
-  });
-
-  // Connessione alla Live
-  connection.connect()
-    .then(state => {
-      console.log('CONNESSO A TIKTOK LIVE! RoomId: ' + state.roomId);
-    })
-    .catch(err => {
-      console.log('Errore di connessione:', err.message || err);
-      console.log('Riprovo tra 10 secondi...');
-      setTimeout(connectToTikTok, 10000);
-    });
-
-  // Ascolto messaggi chat
-  connection.on('chat', data => {
-    console.log('[CHAT] ' + data.uniqueId + ': ' + data.comment);
-    const payload = JSON.stringify({
-      user: data.uniqueId,
-      comment: data.comment
-    });
+function broadcast(data) {
+    const message = JSON.stringify(data);
 
     wss.clients.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(payload);
-      }
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(message);
+        }
     });
-  });
-
-  connection.on('disconnected', () => {
-    console.log('TikTok Live disconnessa. Riconnessione in corso...');
-    setTimeout(connectToTikTok, 10000);
-  });
 }
 
-connectToTikTok();
+wss.on("connection", socket => {
 
-server.listen(PORT, () => {
-  console.log('Server in ascolto sulla porta ' + PORT);
+    console.log("🌐 Nuovo client WebSocket collegato");
+
+    socket.send(JSON.stringify({
+        type: "status",
+        message: "WebSocket collegato",
+        tiktok: TIKTOK_ID
+    }));
+
+    socket.on("close", () => {
+        console.log("🔌 Client WebSocket disconnesso");
+    });
+
+    socket.on("error", error => {
+        console.log("WebSocket client error:", error.message);
+    });
+});
+
+// ----------------------------------------------------
+// TIKTOK CONNECTION
+// ----------------------------------------------------
+
+async function connectTikTok() {
+
+    try {
+
+        console.log(`🔄 Connessione a TikTok LIVE @${TIKTOK_ID}...`);
+
+        // Import dinamico perché piratetok-live-js è ESM
+        const module = await import("piratetok-live-js");
+
+        const TikTokLiveClient = module.TikTokLiveClient;
+        const EventType = module.EventType;
+
+        tiktokClient = new TikTokLiveClient(TIKTOK_ID);
+
+        // --------------------------------------------
+        // CHAT
+        // --------------------------------------------
+
+        tiktokClient.on(EventType.chat, data => {
+
+            const username =
+                data.user?.uniqueId ||
+                data.user?.nickname ||
+                "utente";
+
+            const nickname =
+                data.user?.nickname ||
+                username;
+
+            const message =
+                data.content ||
+                data.comment ||
+                "";
+
+            console.log(`💬 ${username}: ${message}`);
+
+            broadcast({
+                type: "chat",
+                username: username,
+                nickname: nickname,
+                message: message,
+                timestamp: Date.now()
+            });
+        });
+
+        // --------------------------------------------
+        // LIKE
+        // --------------------------------------------
+
+        tiktokClient.on(EventType.like, data => {
+
+            const username =
+                data.user?.uniqueId ||
+                data.user?.nickname ||
+                "utente";
+
+            console.log(`❤️ Like: ${username}`);
+
+            broadcast({
+                type: "like",
+                username: username,
+                likes: data.total || data.likeCount || 1,
+                timestamp: Date.now()
+            });
+        });
+
+        // --------------------------------------------
+        // GIFT
+        // --------------------------------------------
+
+        tiktokClient.on(EventType.gift, data => {
+
+            const username =
+                data.user?.uniqueId ||
+                data.user?.nickname ||
+                "utente";
+
+            const giftName =
+                data.gift?.name ||
+                data.giftName ||
+                "Gift";
+
+            console.log(`🎁 ${username}: ${giftName}`);
+
+            broadcast({
+                type: "gift",
+                username: username,
+                gift: giftName,
+                repeat: data.repeatCount || 1,
+                timestamp: Date.now()
+            });
+        });
+
+        // --------------------------------------------
+        // FOLLOW
+        // --------------------------------------------
+
+        tiktokClient.on(EventType.follow, data => {
+
+            const username =
+                data.user?.uniqueId ||
+                data.user?.nickname ||
+                "utente";
+
+            console.log(`➕ Follow: ${username}`);
+
+            broadcast({
+                type: "follow",
+                username: username,
+                timestamp: Date.now()
+            });
+        });
+
+        // --------------------------------------------
+        // JOIN
+        // --------------------------------------------
+
+        tiktokClient.on(EventType.join, data => {
+
+            const username =
+                data.user?.uniqueId ||
+                data.user?.nickname ||
+                "utente";
+
+            console.log(`👋 Join: ${username}`);
+
+            broadcast({
+                type: "join",
+                username: username,
+                timestamp: Date.now()
+            });
+        });
+
+        // --------------------------------------------
+        // CONNESSIONE
+        // --------------------------------------------
+
+        await tiktokClient.connect();
+
+        console.log(`✅ Connesso a TikTok LIVE @${TIKTOK_ID}`);
+
+        broadcast({
+            type: "status",
+            status: "connected",
+            tiktok: TIKTOK_ID,
+            timestamp: Date.now()
+        });
+
+    } catch (error) {
+
+        console.error("❌ Errore TikTok:", error);
+
+        broadcast({
+            type: "status",
+            status: "error",
+            message: error.message,
+            timestamp: Date.now()
+        });
+
+        // Riprova dopo 10 secondi
+        clearTimeout(reconnectTimer);
+
+        reconnectTimer = setTimeout(() => {
+            connectTikTok();
+        }, 10000);
+    }
+}
+
+// ----------------------------------------------------
+// START SERVER
+// ----------------------------------------------------
+
+server.listen(PORT, "0.0.0.0", () => {
+
+    console.log("----------------------------------------");
+    console.log("🚀 SERVER AVVIATO");
+    console.log("----------------------------------------");
+    console.log(`Porta: ${PORT}`);
+    console.log(`TikTok: @${TIKTOK_ID}`);
+    console.log("WebSocket: attivo");
+    console.log("----------------------------------------");
+
+    connectTikTok();
 });
