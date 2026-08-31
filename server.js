@@ -2,7 +2,7 @@ const http = require("http");
 const WebSocket = require("ws");
 
 const PORT = process.env.PORT || 10000;
-const TIKTOK_USERNAME = "margh.90";
+const TIKTOK_USERNAME = "manolita772";
 
 let tiktokClient = null;
 
