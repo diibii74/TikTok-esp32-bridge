@@ -1,13 +1,12 @@
 {
-  "name": "tiktok-chat-websocket",
+  "name": "tiktok-live-websocket",
   "version": "1.0.0",
-  "description": "TikTok LIVE chat to WebSocket",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "piratetok-live-js": "^0.1.0",
+    "piratetok-live-js": "latest",
     "ws": "^8.18.0"
   }
 }
